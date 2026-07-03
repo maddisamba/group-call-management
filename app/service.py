@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 
 
@@ -17,29 +18,31 @@ class FloorAcquireResult:
 class FloorService:
 
     def __init__(self) -> None:
-        self.locks: dict[str,str]={}
+        self.floor_holders: dict[str,str]={}
+        self.floor_locks:dict[str, asyncio.Lock] ={}
 
-    def _lock_for(self, group_id:str, user_id:str):
-        self.locks[group_id]=user_id
-        return self.locks
+    def _lock_for(self, group_id:str) -> asyncio.Lock:        
+        return self.floor_locks.setdefault(group_id,asyncio.Lock())
 
     async def acquire_floor(self, group_id:str, user_id:str, priority:bool) -> FloorAcquireResult:
-        holder=self.locks.get(group_id)
-        if holder is None:
-            self._lock_for(group_id,user_id)
-            return FloorAcquireResult(FloorAcquireOutCome.OBTAINED)
-        if holder == user_id :
-            return FloorAcquireResult(FloorAcquireOutCome.ALREADY_HELD_BY_SELF)
-        if priority:
-            self._lock_for(group_id,user_id)
-            return FloorAcquireResult(FloorAcquireOutCome.OBTAINED)
-        return FloorAcquireResult(FloorAcquireOutCome.HELD_BY_OTHER,holder=holder)
+        async with self._lock_for(group_id):
+            holder=self.floor_holders.get(group_id)
+            if holder is None:
+                self.floor_holders[group_id]=user_id
+                return FloorAcquireResult(FloorAcquireOutCome.OBTAINED)
+            if holder == user_id :
+                return FloorAcquireResult(FloorAcquireOutCome.ALREADY_HELD_BY_SELF)
+            if priority:
+                self.floor_holders[group_id]=user_id
+                return FloorAcquireResult(FloorAcquireOutCome.OBTAINED)
+            return FloorAcquireResult(FloorAcquireOutCome.HELD_BY_OTHER,holder=holder)
     
     async def release_floor(self, group_id:str, user_id:str) -> bool:
-        if self.locks.get(group_id) == user_id:
-            del self.locks[group_id]
-            return True
-        return False
+        async with self._lock_for(group_id):
+            if self.floor_holders.get(group_id) == user_id:
+                del self.floor_holders[group_id]
+                return True
+            return False
     
     async def current_floor_holder(self, group_id:str) -> str | None:
-        return self.locks.get(group_id)
+        return self.floor_holders.get(group_id)
