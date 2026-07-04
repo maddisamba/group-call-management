@@ -1,9 +1,9 @@
 import asyncio
 from dataclasses import dataclass
+from enum import Enum
 
 
-
-class FloorAcquireOutCome(enumerate):
+class FloorAcquireOutCome(Enum):
     OBTAINED = "obtained"
     ALREADY_HELD_BY_SELF="self"
     HELD_BY_OTHER="other"
