@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -6,12 +8,21 @@ from fastapi.responses import JSONResponse
 from app.routers.floors import router
 from app.service import FloorService
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    # Cancel any floor-timeout timers still pending on shutdown.
+    await app.state.floor_service.aclose()
+
+
 def create_app():
     app=FastAPI(
         title="Floor Control API",
         description='An API for managing a "floor" in a push-to-talk '
                     "radio group system.",
-        version="1.0.0"
+        version="1.0.0",
+        lifespan=lifespan,
     )
     app.state.floor_service=FloorService()
     app.include_router(router)

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, field_validator
 
 
@@ -13,3 +15,16 @@ class UserRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("userId must be a non-empty string")
         return v
+
+
+class AuditRecordResponse(BaseModel):
+    """One floor hold: who had the floor on which group, and when.
+
+    releasedAt is null while the hold is still active.
+    """
+
+    groupId: str
+    userId: str
+    priority: bool
+    obtainedAt: datetime
+    releasedAt: datetime | None
