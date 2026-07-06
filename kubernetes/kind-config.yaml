@@ -1,0 +1,10 @@
+# kind cluster config: forwards the host's port 30080 to the cluster node,
+# so the NodePort service (kubernetes/service.yaml) is reachable at
+# http://localhost:30080.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 30080
